@@ -1,7 +1,6 @@
 import * as r from "runtypes";
 
-const UUIDRegex =
-  /^[0-9A-F]{8}-[0-9A-F]{4}-[4][0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i;
+const UUIDRegex = /^[0-9A-F]{8}-[0-9A-F]{4}-[4][0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i;
 // Ensure the term is an integer
 const isUUID = (x: string) => UUIDRegex.test(x);
 // The validator is checking that:

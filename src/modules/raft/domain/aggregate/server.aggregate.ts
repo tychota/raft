@@ -42,7 +42,7 @@
  */
 
 import { LogIndex, logIndexV } from "../valueObject/logIndex";
-import { ServerId } from "../valueObject/server";
+import { ServerId } from "../valueObject/serverId";
 import { TermIndex, termIndexV } from "../valueObject/termIndex";
 
 enum ServerKind {
@@ -185,6 +185,21 @@ export class ServerAggregate {
     return new ServerAggregate(id, memberServerIds, term, serverVotedFor, lastIndexCommitted, lastIndexProjected);
   }
 
+  // ----------------------------
+  // --- rules and invariants ---
+  // ----------------------------
+
+  // ($5.1)
+  private isTermOutdated(externalTerm: TermIndex) {
+    return this.term < externalTerm;
+  }
+
+  // ($5.1)
+  private acceptNewTerm(externalTerm: TermIndex) {
+    this.term = externalTerm;
+    this.becomeFollower();
+  }
+
   // ------------------
   // --- transition ---
   // ------------------
@@ -213,9 +228,9 @@ export class ServerAggregate {
     this.serverVotedFor = null;
   }
 
-  public removeElected() {
+  public looseLeadership() {
     this.transition(ServerKind.LEADER, ServerKind.FOLLOWER);
-    this.logReplicated = undefined;
+    this.logToReplicate = undefined;
     this.logReplicated = undefined;
   }
 
@@ -224,13 +239,16 @@ export class ServerAggregate {
       case ServerKind.CANDIDATE:
         this.cancelElection();
         break;
-      case ServerKind.CANDIDATE:
+      case ServerKind.FOLLOWER:
+        break;
+      case ServerKind.LEADER:
+        this.looseLeadership();
         break;
     }
   }
 
   // -----------
-  // --- rpc ---
+  // --- RPC ---
   // -----------
 
   public requestVote(
@@ -238,12 +256,20 @@ export class ServerAggregate {
     candidateId: ServerId,
     candidateLastLogIndex: LogIndex,
     candidateLastLogTerm: TermIndex
-  ): { term: TermIndex; voteGranted: boolean } | null {
+  ): { term: TermIndex; voteGranted: boolean } {
+    // ($5.1) If the term in the RPC is gritter than the candidate’s current term,
+    // then the candidate returns to follower
+    if (this.isTermOutdated(candidateTerm)) {
+      this.acceptNewTerm(candidateTerm);
+      return { term: this.term, voteGranted: false };
+    }
+
     // ($5.2) If the term in the RPC is smaller than the candidate’s current term,
     // then the candidate rejects the RPC and continues in candidate state
     if (this.isFormerTerm(candidateTerm)) {
       return { term: this.term, voteGranted: false };
     }
+
     // ($5.2) Each server will vote for at most one candidate in a
     //given term, on a first-come-first-served basis
     const canVoteFor = this.canVoteFor(candidateId);
@@ -255,7 +281,7 @@ export class ServerAggregate {
       return { term: this.term, voteGranted: true };
     }
 
-    return null;
+    return { term: this.term, voteGranted: false };
   }
 
   // --- utils
@@ -275,9 +301,9 @@ export class ServerAggregate {
   }
 
   private isNewLog(incomingLogTerm: TermIndex, incomingLogIndex: LogIndex) {
-    if (incomingLogTerm > this.term) return true;
-    if (incomingLogIndex > this.lastIndexCommitted) return true;
-    return false;
+    console.log(this.term, incomingLogTerm);
+    if (incomingLogTerm === this.term) return incomingLogIndex >= this.lastIndexCommitted;
+    return incomingLogTerm >= this.term;
   }
 
   private isFormerTerm(candidateTerm: TermIndex) {
@@ -285,7 +311,7 @@ export class ServerAggregate {
   }
 
   private increaseTerm() {
-    increase(this.term);
+    this.term = increase(this.term);
   }
 
   private transition(currentKind: ServerKind, targetKind: ServerKind) {
@@ -294,4 +320,4 @@ export class ServerAggregate {
   }
 }
 
-const increase = <T extends number>(previousValue: T): T => ((previousValue as number) + 1) as T;
+export const increase = <T extends number>(previousValue: T): T => ((previousValue as number) + 1) as T;

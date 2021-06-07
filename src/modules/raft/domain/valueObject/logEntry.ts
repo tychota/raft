@@ -1,5 +1,5 @@
 import * as r from "runtypes";
-import { logCommandV } from "./command";
+import { logCommandV } from "./logCommand";
 import { termIndexV } from "./termIndex";
 
 // The validator is checking that:
