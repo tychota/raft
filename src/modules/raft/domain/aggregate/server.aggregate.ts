@@ -41,11 +41,12 @@
  *
  */
 
+import { LogEntry } from "../valueObject/logEntry";
 import { LogIndex, logIndexV } from "../valueObject/logIndex";
 import { ServerId } from "../valueObject/serverId";
 import { TermIndex, termIndexV } from "../valueObject/termIndex";
 
-enum ServerKind {
+export enum ServerKind {
   "LEADER" = "LEADER",
   "CANDIDATE" = "CANDIDATE",
   "FOLLOWER" = "FOLLOWER",
@@ -101,6 +102,7 @@ export class ServerAggregate {
    * @memberof ServerAggregate
    */
   serverVotedFor: ServerId | null;
+  logs: LogEntry[];
 
   // ----------------------
   // --- volatile state ---
@@ -161,6 +163,7 @@ export class ServerAggregate {
     memberServerIds: ServerId[],
     term: TermIndex,
     serverVotedFor: ServerId | null,
+    logs: LogEntry[],
     lastIndexCommitted: LogIndex,
     lastIndexProjected: LogIndex,
     logToReplicate: LogIndexByServerId | undefined = undefined,
@@ -171,6 +174,7 @@ export class ServerAggregate {
     this.kind = ServerKind.FOLLOWER;
     this.term = term;
     this.serverVotedFor = serverVotedFor;
+    this.logs = logs;
     this.lastIndexCommitted = lastIndexCommitted;
     this.lastIndexProjected = lastIndexProjected;
     this.logToReplicate = logToReplicate;
@@ -182,7 +186,8 @@ export class ServerAggregate {
     const serverVotedFor = null;
     const lastIndexCommitted = logIndexV.check(0);
     const lastIndexProjected = logIndexV.check(0);
-    return new ServerAggregate(id, memberServerIds, term, serverVotedFor, lastIndexCommitted, lastIndexProjected);
+    const logs: LogEntry[] = [];
+    return new ServerAggregate(id, memberServerIds, term, serverVotedFor, logs, lastIndexCommitted, lastIndexProjected);
   }
 
   // ----------------------------
@@ -301,9 +306,33 @@ export class ServerAggregate {
   }
 
   private isNewLog(incomingLogTerm: TermIndex, incomingLogIndex: LogIndex) {
-    console.log(this.term, incomingLogTerm);
-    if (incomingLogTerm === this.term) return incomingLogIndex >= this.lastIndexCommitted;
-    return incomingLogTerm >= this.term;
+    const ownLog: LogEntry | undefined = this.getLastCommittedLog();
+
+    console.log(ownLog);
+
+    if (ownLog === undefined) {
+      return true;
+    }
+
+    const ownLogTerm = ownLog.term;
+
+    console.log(ownLogTerm);
+
+    if (incomingLogTerm === ownLogTerm) {
+      return incomingLogIndex >= this.lastIndexCommitted;
+    }
+
+    return incomingLogTerm >= ownLogTerm;
+  }
+
+  private getLogAt(logIndex: LogIndex) {
+    const arrayIndex = logIndex - 1;
+    if (arrayIndex < 0) return undefined;
+    return this.logs[arrayIndex];
+  }
+
+  private getLastCommittedLog() {
+    return this.getLogAt(this.lastIndexCommitted);
   }
 
   private isFormerTerm(candidateTerm: TermIndex) {
