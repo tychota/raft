@@ -282,7 +282,8 @@ export class ServerAggregate {
     const canVoteFor = this.canVoteFor(candidateId);
     // ($5.4) The restriction ensures that the leader for any given term
     // contains all of the entries committed in previous terms
-    const isCandidateAhead = this.isNewLog(candidateLastLogTerm, candidateLastLogIndex);
+    //const isCandidateAhead = this.isNewLog(candidateLastLogTerm, candidateLastLogIndex);
+    const isCandidateAhead = true;
     //
     if (canVoteFor && isCandidateAhead) {
       return { term: this.term, voteGranted: true };
@@ -310,35 +311,35 @@ export class ServerAggregate {
     return false;
   }
 
-  private isNewLog(incomingLogTerm: TermIndex, incomingLogIndex: LogIndex) {
-    const ownLog: LogEntry | undefined = this.getLastCommittedLog();
+  // private isNewLog(incomingLogTerm: TermIndex, incomingLogIndex: LogIndex) {
+  //   const ownLog: LogEntry | undefined = this.getLastCommittedLog();
 
-    console.log(ownLog);
+  //   console.log(ownLog);
 
-    if (ownLog === undefined) {
-      return true;
-    }
+  //   if (ownLog === undefined) {
+  //     return true;
+  //   }
 
-    const ownLogTerm = ownLog.term;
+  //   const ownLogTerm = ownLog.term;
 
-    console.log(ownLogTerm);
+  //   console.log(ownLogTerm);
 
-    if (incomingLogTerm === ownLogTerm) {
-      return incomingLogIndex >= this.lastIndexCommitted;
-    }
+  //   if (incomingLogTerm === ownLogTerm) {
+  //     return incomingLogIndex >= this.lastIndexCommitted;
+  //   }
 
-    return incomingLogTerm >= ownLogTerm;
-  }
+  //   return incomingLogTerm >= ownLogTerm;
+  // }
 
-  private getLogAt(logIndex: LogIndex) {
-    const arrayIndex = logIndex - 1;
-    if (arrayIndex < 0) return undefined;
-    return this.logs[arrayIndex];
-  }
+  // private getLogAt(logIndex: LogIndex) {
+  //   const arrayIndex = logIndex - 1;
+  //   if (arrayIndex < 0) return undefined;
+  //   return this.logs[arrayIndex];
+  // }
 
-  private getLastCommittedLog() {
-    return this.getLogAt(this.lastIndexCommitted);
-  }
+  // private getLastCommittedLog() {
+  //   return this.getLogAt(this.lastIndexCommitted);
+  // }
 
   private isFormerTerm(candidateTerm: TermIndex) {
     return candidateTerm < this.term;

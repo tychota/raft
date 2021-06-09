@@ -1,10 +1,11 @@
-import { ServerId } from "../../valueObject/serverId";
-import { TermIndex } from "../../valueObject/termIndex";
-import { ServerAggregate, ServerKind } from "../server.aggregate";
+import { ServerId } from "../../../valueObject/serverId";
+import { TermIndex } from "../../../valueObject/termIndex";
+import { LogIndex } from "../../../valueObject/logIndex";
+
+import { ServerAggregate, ServerKind } from "../../server.aggregate";
 
 import "jest";
 import { diff } from "jest-diff";
-import { LogIndex } from "../../valueObject/logIndex";
 
 declare global {
   namespace jest {
