@@ -224,12 +224,14 @@ export class ServerAggregate {
   public winElection() {
     this.transition(ServerKind.CANDIDATE, ServerKind.LEADER);
     const nextIndex = increase(this.lastIndexCommitted);
+    this.removeVote();
     this.logToReplicate = this.buildMembersMap(nextIndex);
     this.logReplicated = this.buildMembersMap(logIndexV.check(0));
   }
 
   public cancelElection() {
     this.transition(ServerKind.CANDIDATE, ServerKind.FOLLOWER);
+    this.removeVote();
     this.serverVotedFor = null;
   }
 
@@ -293,6 +295,9 @@ export class ServerAggregate {
 
   private voteForMe() {
     this.serverVotedFor = this.serverId;
+  }
+  private removeVote() {
+    this.serverVotedFor = null;
   }
 
   private buildMembersMap<V>(initialValue: V): { [serverId: string]: V } {

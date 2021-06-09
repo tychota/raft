@@ -2,13 +2,18 @@ import { ServerId } from "../../valueObject/serverId";
 import { TermIndex } from "../../valueObject/termIndex";
 import { ServerAggregate, ServerKind } from "../server.aggregate";
 
+import "jest";
 import { diff } from "jest-diff";
+import { LogIndex } from "../../valueObject/logIndex";
 
 declare global {
   namespace jest {
     interface Matchers<R> {
-      toHaveKind(kind: ServerKind): R;
-      toHaveConfig(serverId: ServerId, members: ServerId[]): R;
+      toBeARaftServerOfKind(kind: ServerKind): R;
+      toHaveRaftPeeringConfig(serverId: ServerId, peers: ServerId[]): R;
+      toHaveVotedRaftServer(serverId: ServerId | null): R;
+      toBeAtRaftTerm(term: TermIndex): R;
+      toHaveHandledRaftLogsUntil(logIndexes: { committed: LogIndex; projected: LogIndex }): R;
     }
   }
 }
@@ -16,62 +21,127 @@ declare global {
 export interface TypeWithArgs<T, A extends any[]> extends Function {
   new (...args: A): T;
 }
-const assertInstanceOfServerAggregate = (instance: ServerAggregate) => {
+const ensureServerAggregate = (instance: ServerAggregate) => {
   if (!(instance instanceof ServerAggregate)) {
     throw new Error("expected value to be a ServerAggregate");
   }
 };
 
+const passOK = { pass: true, message: () => "" };
+const passKO = (message: string) => ({ pass: false, message: () => message });
+
+function checker<V>(
+  this: jest.MatcherContext,
+  receivedValue: V,
+  expectedValue: V,
+  metadata: { matcher: string; received?: string; expected?: string; errorLog: string }
+) {
+  if (this.equals(receivedValue, expectedValue)) return { ok: true, message: "" };
+
+  let message = "";
+  const diffOptions = { expand: this.expand };
+  const diffString = diff(expectedValue, receivedValue, diffOptions);
+
+  message += metadata.errorLog;
+  message += "\n\n";
+  message += this.utils.matcherHint(metadata.matcher, metadata.received, metadata.expected, {});
+  message += "\n\n";
+  if (diffString && diffString.includes("- Expect")) {
+    message += `Difference:\n\n${diffString}`;
+  } else {
+    message += `Expected: ${this.utils.printExpected(expectedValue)}`;
+    message += "\n";
+    message += `Received: ${this.utils.printReceived(receivedValue)}`;
+  }
+  return { ok: false, message };
+}
+
 expect.extend({
-  toHaveKind(received: ServerAggregate, kind: ServerKind) {
-    assertInstanceOfServerAggregate(received)
-    this
-    if (received.kind !== kind) {
-      return { pass: false, message: () => `Expected a raft server of kind "${kind}", got kind "${received.kind}".` };
-    }
-    return { pass: true, message: () => "" };
-  },
-  toHaveConfig(received: ServerAggregate, serverId: ServerId, members: ServerId[]) {
-    if (!(received instanceof ServerAggregate)) {
-      throw new Error("expected value to be a ServerAggregate");
-    }
-    if (received.serverId !== serverId) {
-      return {
-        pass: false,
-        message: () => `Expected a raft server with an id "${serverId}", got id "${received.serverId}".`,
-      };
-    }
-    const options = {
-      comment: "Deep equality",
-      isNot: this.isNot,
-      promise: this.promise,
+  toBeARaftServerOfKind(received: ServerAggregate, kind: ServerKind) {
+    ensureServerAggregate(received);
+
+    const metadata = {
+      errorLog: "Server have incorrect kind.",
+      expected: "kind",
+      matcher: "toBeARaftServerOfKind",
     };
-    if (!this.equals(received.memberServerIds, members)) {
-      const diffString = diff(members, received.memberServerIds, {
-        expand: this.expand,
-      });
-      return {
-        pass: false,
-        message: () =>
-          this.utils.matcherHint("toHaveConfig", "expected", "_, members", options) +
-          "\n\n" +
-          (diffString && diffString.includes("- Expect")
-            ? `Difference:\n\n${diffString}`
-            : `Expected: ${this.utils.printExpected(members)}\n` + `Received: ${this.utils.printReceived(received)}`),
-      };
-    }
-    return { pass: true, message: () => "" };
+    const { ok, message } = checker.call(this, received.kind, kind, metadata);
+    if (!ok) return passKO(message);
+    return passOK;
   },
-  toBeAtTerm(received: ServerAggregate, term: TermIndex) {
-    if (!(received instanceof ServerAggregate)) {
-      throw new Error("expected value to be a ServerAggregate");
-    }
-    if (received.term !== term) {
-      return {
-        pass: false,
-        message: () => `Expected a raft server with term "${term}", got kind "${received.term}".`,
-      };
-    }
-    return { pass: true, message: () => "" };
+
+  toHaveRaftPeeringConfig(received: ServerAggregate, serverId: ServerId, peers: ServerId[]) {
+    ensureServerAggregate(received);
+
+    const metadata1 = {
+      errorLog: "Server have incorrect serverId.",
+      expected: "serverId",
+      matcher: "toHaveVotedRaftServer",
+    };
+    const { ok: ok1, message: message1 } = checker.call(this, received.serverId, serverId, metadata1);
+    if (!ok1) return passKO(message1);
+
+    const metadata2 = {
+      errorLog: "Server have incorrect peers.",
+      expected: "serverIds",
+      matcher: "toHaveVotedRaftServer",
+    };
+    const { ok: ok2, message: message2 } = checker.call(this, received.memberServerIds, peers, metadata2);
+    if (!ok2) return passKO(message2);
+    return passOK;
+  },
+  toHaveVotedRaftServer(received: ServerAggregate, serverId: ServerId | null) {
+    ensureServerAggregate(received);
+
+    const metadata = {
+      errorLog: "Server have incorrect serverVotedFor.",
+      expected: "serverId",
+      matcher: "toHaveVotedRaftServer",
+    };
+    const { ok, message } = checker.call(this, received.serverVotedFor, serverId, metadata);
+    if (!ok) return passKO(message);
+    return passOK;
+  },
+  toBeAtRaftTerm(received: ServerAggregate, term: TermIndex) {
+    ensureServerAggregate(received);
+
+    const metadata = {
+      errorLog: "Server have incorrect term.",
+      expected: "term",
+      matcher: "toBeAtRaftTerm",
+    };
+    const { ok, message } = checker.call(this, received.term, term, metadata);
+    if (!ok) return passKO(message);
+    return passOK;
+  },
+  toHaveHandledRaftLogsUntil(received: ServerAggregate, logIndexes: { committed: LogIndex; projected: LogIndex }) {
+    ensureServerAggregate(received);
+
+    const metadata1 = {
+      errorLog: "Server have incorrect committed log index.",
+      expected: "{committed: logIndex, projected: _}",
+      matcher: "toHaveHandledRaftLogsUntil",
+    };
+    const { ok: ok1, message: message1 } = checker.call(
+      this,
+      received.lastIndexCommitted,
+      logIndexes.committed,
+      metadata1
+    );
+    if (!ok1) return passKO(message1);
+
+    const metadata2 = {
+      errorLog: "Server have incorrect projected log index.",
+      expected: "{committed: _, projected: logIndex}",
+      matcher: "toHaveHandledRaftLogsUntil",
+    };
+    const { ok: ok2, message: message2 } = checker.call(
+      this,
+      received.lastIndexCommitted,
+      logIndexes.committed,
+      metadata2
+    );
+    if (!ok2) return passKO(message2);
+    return passOK;
   },
 });

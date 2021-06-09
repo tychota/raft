@@ -6,53 +6,54 @@ import { termIndexV } from "../../valueObject/termIndex";
 
 import { increase, ServerAggregate, ServerKind } from "../server.aggregate";
 
+const fixtures = {
+  SERVER_A: serverIdV.check("1af0d407-d520-4fff-9312-cf6ac72521a8"),
+  SERVER_B: serverIdV.check("284fea2d-e7ad-4f7e-8a4e-c111f51420b7"),
+  SERVER_C: serverIdV.check("3051168d-646e-45e1-ba71-d8b8f00f01b1"),
+};
+
+const constants = {
+  NO_SERVER: null,
+
+  TERM_0: termIndexV.check(0),
+  TERM_1: termIndexV.check(1),
+  TERM_2: termIndexV.check(2),
+
+  LOG_0: logIndexV.check(0),
+  LOG_1: logIndexV.check(1),
+  LOG_2: logIndexV.check(2),
+};
+
+const generateFollowerServer = () => {
+  const server = ServerAggregate.fromScratch(fixtures.SERVER_A, [fixtures.SERVER_B, fixtures.SERVER_C]);
+  return server;
+};
+
 describe("ServerAggregate can be created", () => {
   it("from scratch", () => {
     // Given
-    const serverId = serverIdV.check("1af0d407-d520-4fff-9312-cf6ac72521a8");
+    const serverId = fixtures.SERVER_A;
     const memberServerIds: ServerId[] = [];
     // When
     const server = ServerAggregate.fromScratch(serverId, memberServerIds);
     // Then
-    // -- kind
-    expect(server).toHaveKind(ServerKind.FOLLOWER);
-    expect(server).toHaveConfig(serverId, []);
-
-    // -- persistent state
-    expect(server.term).toEqual(0);
-    expect(server.serverVotedFor).toEqual(null);
-    // -- volatile state
-    expect(server.lastIndexCommitted).toEqual(0);
-    expect(server.lastIndexProjected).toEqual(0);
-    expect(server.logToReplicate).toEqual(undefined);
-    expect(server.logReplicated).toEqual(undefined);
+    expect(server).toBeARaftServerOfKind(ServerKind.FOLLOWER);
+    expect(server).toHaveVotedRaftServer(constants.NO_SERVER);
+    expect(server).toHaveRaftPeeringConfig(serverId, memberServerIds);
+    expect(server).toBeAtRaftTerm(constants.TERM_0);
+    expect(server).toHaveHandledRaftLogsUntil({ committed: constants.LOG_0, projected: constants.LOG_0 });
   });
   it("from scratch - with multiple server", () => {
-    // Given
-    const serverId = serverIdV.check("1af0d407-d520-4fff-9312-cf6ac72521a8");
-    const memberServerIds: ServerId[] = [
-      serverIdV.check("98b5cdac-4e4d-4668-9225-f0cf2a73ff4d"),
-      serverIdV.check("656f0c36-b4f2-4b3f-8b1e-edf512b7098a"),
-    ];
+    const serverId = fixtures.SERVER_A;
+    const memberServerIds: ServerId[] = [fixtures.SERVER_B, fixtures.SERVER_C];
     // When
     const server = ServerAggregate.fromScratch(serverId, memberServerIds);
     // Then
-    // -- kind
-    expect(server.kind).toBe("FOLLOWER");
-    // -- config
-    expect(server.serverId).toBe(serverId);
-    expect(server.memberServerIds).toEqual([
-      "98b5cdac-4e4d-4668-9225-f0cf2a73ff4d",
-      "656f0c36-b4f2-4b3f-8b1e-edf512b7098a",
-    ]);
-    // -- persistent state
-    expect(server.term).toEqual(0);
-    expect(server.serverVotedFor).toEqual(null);
-    // -- volatile state
-    expect(server.lastIndexCommitted).toEqual(0);
-    expect(server.lastIndexProjected).toEqual(0);
-    expect(server.logToReplicate).toEqual(undefined);
-    expect(server.logReplicated).toEqual(undefined);
+    expect(server).toBeARaftServerOfKind(ServerKind.FOLLOWER);
+    expect(server).toHaveVotedRaftServer(constants.NO_SERVER);
+    expect(server).toHaveRaftPeeringConfig(serverId, memberServerIds);
+    expect(server).toBeAtRaftTerm(constants.TERM_0);
+    expect(server).toHaveHandledRaftLogsUntil({ committed: constants.LOG_0, projected: constants.LOG_0 });
   });
 });
 
@@ -61,47 +62,27 @@ describe("ServerAggregate transition with success", () => {
     describe("to CANDIDATE kind", () => {
       it("startElection() ", () => {
         // Given
-        const serverId = serverIdV.check("1af0d407-d520-4fff-9312-cf6ac72521a8");
-        const memberServerIds: ServerId[] = [];
-        const server = ServerAggregate.fromScratch(serverId, memberServerIds);
+        const server = generateFollowerServer();
         // When
         server.startElection();
         // Then
-        // -- kind
-        expect(server.kind).toBe("CANDIDATE");
-        // -- config
-        expect(server.serverId).toBe(serverId);
-        expect(server.memberServerIds).toEqual([]);
-        // -- persistent state
-        expect(server.term).toBe(1);
-        expect(server.serverVotedFor).toBe(serverId);
-        // -- volatile state
-        expect(server.lastIndexCommitted).toBe(0);
-        expect(server.lastIndexProjected).toBe(0);
-        expect(server.logToReplicate).toEqual(undefined);
-        expect(server.logReplicated).toEqual(undefined);
+        expect(server).toBeARaftServerOfKind(ServerKind.CANDIDATE);
+        expect(server).toHaveVotedRaftServer(fixtures.SERVER_A);
+        expect(server).toHaveRaftPeeringConfig(fixtures.SERVER_A, [fixtures.SERVER_B, fixtures.SERVER_C]);
+        expect(server).toBeAtRaftTerm(constants.TERM_1);
+        expect(server).toHaveHandledRaftLogsUntil({ committed: constants.LOG_0, projected: constants.LOG_0 });
       });
       it("becomeFollower() ", () => {
         // Given
-        const serverId = serverIdV.check("1af0d407-d520-4fff-9312-cf6ac72521a8");
-        const memberServerIds: ServerId[] = [];
-        const server = ServerAggregate.fromScratch(serverId, memberServerIds);
+        const server = generateFollowerServer();
         // When
         server.becomeFollower();
         // Then
-        // -- kind
-        expect(server.kind).toBe("FOLLOWER");
-        // -- config
-        expect(server.serverId).toBe(serverId);
-        expect(server.memberServerIds).toEqual([]);
-        // -- persistent state
-        expect(server.term).toBe(0);
-        expect(server.serverVotedFor).toBe(null);
-        // -- volatile state
-        expect(server.lastIndexCommitted).toBe(0);
-        expect(server.lastIndexProjected).toBe(0);
-        expect(server.logToReplicate).toEqual(undefined);
-        expect(server.logReplicated).toEqual(undefined);
+        expect(server).toBeARaftServerOfKind(ServerKind.FOLLOWER);
+        expect(server).toHaveVotedRaftServer(constants.NO_SERVER);
+        expect(server).toHaveRaftPeeringConfig(fixtures.SERVER_A, [fixtures.SERVER_B, fixtures.SERVER_C]);
+        expect(server).toBeAtRaftTerm(constants.TERM_0);
+        expect(server).toHaveHandledRaftLogsUntil({ committed: constants.LOG_0, projected: constants.LOG_0 });
       });
     });
   });
@@ -109,99 +90,59 @@ describe("ServerAggregate transition with success", () => {
     describe("to CANDIDATE kind", () => {
       it("restartElection() ", () => {
         // Given
-        const serverId = serverIdV.check("1af0d407-d520-4fff-9312-cf6ac72521a8");
-        const memberServerIds: ServerId[] = [];
-        const server = ServerAggregate.fromScratch(serverId, memberServerIds);
+        const server = generateFollowerServer();
         server.startElection();
         // When
         server.restartElection();
         // Then
-        // -- kind
-        expect(server.kind).toBe("CANDIDATE");
-        // -- config
-        expect(server.serverId).toBe(serverId);
-        expect(server.memberServerIds).toEqual([]);
-        // -- persistent state
-        expect(server.term).toBe(2);
-        expect(server.serverVotedFor).toBe(serverId);
-        // -- volatile state
-        expect(server.lastIndexCommitted).toBe(0);
-        expect(server.lastIndexProjected).toBe(0);
-        expect(server.logToReplicate).toEqual(undefined);
-        expect(server.logReplicated).toEqual(undefined);
+        expect(server).toBeARaftServerOfKind(ServerKind.CANDIDATE);
+        expect(server).toHaveVotedRaftServer(fixtures.SERVER_A);
+        expect(server).toHaveRaftPeeringConfig(fixtures.SERVER_A, [fixtures.SERVER_B, fixtures.SERVER_C]);
+        expect(server).toBeAtRaftTerm(constants.TERM_2);
+        expect(server).toHaveHandledRaftLogsUntil({ committed: constants.LOG_0, projected: constants.LOG_0 });
       });
     });
     describe("to FOLLOWER kind", () => {
       it("cancelElection() ", () => {
         // Given
-        const serverId = serverIdV.check("1af0d407-d520-4fff-9312-cf6ac72521a8");
-        const memberServerIds: ServerId[] = [];
-        const server = ServerAggregate.fromScratch(serverId, memberServerIds);
+        const server = generateFollowerServer();
         server.startElection();
         // When
         server.cancelElection();
         // Then
-        // -- kind
-        expect(server.kind).toBe("FOLLOWER");
-        // -- config
-        expect(server.serverId).toBe(serverId);
-        expect(server.memberServerIds).toEqual([]);
-        // -- persistent state
-        expect(server.term).toBe(1);
-        expect(server.serverVotedFor).toBe(null);
-        // -- volatile state
-        expect(server.lastIndexCommitted).toBe(0);
-        expect(server.lastIndexProjected).toBe(0);
-        expect(server.logToReplicate).toBe(undefined);
-        expect(server.logReplicated).toBe(undefined);
+        expect(server).toBeARaftServerOfKind(ServerKind.FOLLOWER);
+        expect(server).toHaveVotedRaftServer(constants.NO_SERVER);
+        expect(server).toHaveRaftPeeringConfig(fixtures.SERVER_A, [fixtures.SERVER_B, fixtures.SERVER_C]);
+        expect(server).toBeAtRaftTerm(constants.TERM_1);
+        expect(server).toHaveHandledRaftLogsUntil({ committed: constants.LOG_0, projected: constants.LOG_0 });
       });
       it("becomeFollower() ", () => {
         // Given
-        const serverId = serverIdV.check("1af0d407-d520-4fff-9312-cf6ac72521a8");
-        const memberServerIds: ServerId[] = [];
-        const server = ServerAggregate.fromScratch(serverId, memberServerIds);
+        const server = generateFollowerServer();
         server.startElection();
         // When
         server.becomeFollower();
         // Then
-        // -- kind
-        expect(server.kind).toBe("FOLLOWER");
-        // -- config
-        expect(server.serverId).toBe(serverId);
-        expect(server.memberServerIds).toEqual([]);
-        // -- persistent state
-        expect(server.term).toBe(1);
-        expect(server.serverVotedFor).toBe(null);
-        // -- volatile state
-        expect(server.lastIndexCommitted).toBe(0);
-        expect(server.lastIndexProjected).toBe(0);
-        expect(server.logToReplicate).toBe(undefined);
-        expect(server.logReplicated).toBe(undefined);
+        expect(server).toBeARaftServerOfKind(ServerKind.FOLLOWER);
+        expect(server).toHaveVotedRaftServer(constants.NO_SERVER);
+        expect(server).toHaveRaftPeeringConfig(fixtures.SERVER_A, [fixtures.SERVER_B, fixtures.SERVER_C]);
+        expect(server).toBeAtRaftTerm(constants.TERM_1);
+        expect(server).toHaveHandledRaftLogsUntil({ committed: constants.LOG_0, projected: constants.LOG_0 });
       });
     });
     describe("to LEADER kind", () => {
       it("winElection() ", () => {
         // Given
-        const serverId = serverIdV.check("1af0d407-d520-4fff-9312-cf6ac72521a8");
-        const memberServerIds: ServerId[] = [];
-        const server = ServerAggregate.fromScratch(serverId, memberServerIds);
+        const server = generateFollowerServer();
         server.startElection();
         // When
         server.winElection();
         // Then
-        // -- kind
-        expect(server.kind).toBe("LEADER");
-        // -- config
-        expect(server.serverId).toBe(serverId);
-        expect(server.memberServerIds).toEqual([]);
-        // -- persistent state
-        expect(server.term).toBe(1);
-        expect(server.serverVotedFor).toBe(serverId);
-        // -- volatile state
-        expect(server.lastIndexCommitted).toBe(0);
-        expect(server.lastIndexProjected).toBe(0);
-        expect(server.logToReplicate).toEqual({});
-        expect(server.logReplicated).toEqual({});
+        expect(server).toBeARaftServerOfKind(ServerKind.LEADER);
+        expect(server).toHaveVotedRaftServer(constants.NO_SERVER);
+        expect(server).toHaveRaftPeeringConfig(fixtures.SERVER_A, [fixtures.SERVER_B, fixtures.SERVER_C]);
+        expect(server).toBeAtRaftTerm(constants.TERM_1);
+        expect(server).toHaveHandledRaftLogsUntil({ committed: constants.LOG_0, projected: constants.LOG_0 });
       });
     });
   });
@@ -209,51 +150,31 @@ describe("ServerAggregate transition with success", () => {
     describe("to FOLLOWER kind", () => {
       it("looseLeadership() ", () => {
         // Given
-        const serverId = serverIdV.check("1af0d407-d520-4fff-9312-cf6ac72521a8");
-        const memberServerIds: ServerId[] = [];
-        const server = ServerAggregate.fromScratch(serverId, memberServerIds);
+        const server = generateFollowerServer();
         server.startElection();
         server.winElection();
         // When
         server.looseLeadership();
         // Then
-        // -- kind
-        expect(server.kind).toBe("FOLLOWER");
-        // -- config
-        expect(server.serverId).toBe(serverId);
-        expect(server.memberServerIds).toEqual([]);
-        // -- persistent state
-        expect(server.term).toBe(1);
-        expect(server.serverVotedFor).toBe(serverId);
-        // -- volatile state
-        expect(server.lastIndexCommitted).toBe(0);
-        expect(server.lastIndexProjected).toBe(0);
-        expect(server.logToReplicate).toBe(undefined);
-        expect(server.logReplicated).toBe(undefined);
+        expect(server).toBeARaftServerOfKind(ServerKind.FOLLOWER);
+        expect(server).toHaveVotedRaftServer(constants.NO_SERVER);
+        expect(server).toHaveRaftPeeringConfig(fixtures.SERVER_A, [fixtures.SERVER_B, fixtures.SERVER_C]);
+        expect(server).toBeAtRaftTerm(constants.TERM_1);
+        expect(server).toHaveHandledRaftLogsUntil({ committed: constants.LOG_0, projected: constants.LOG_0 });
       });
       it("becomeFollower() ", () => {
         // Given
-        const serverId = serverIdV.check("1af0d407-d520-4fff-9312-cf6ac72521a8");
-        const memberServerIds: ServerId[] = [];
-        const server = ServerAggregate.fromScratch(serverId, memberServerIds);
+        const server = generateFollowerServer();
         server.startElection();
         server.winElection();
         // When
         server.becomeFollower();
         // Then
-        // -- kind
-        expect(server.kind).toBe("FOLLOWER");
-        // -- config
-        expect(server.serverId).toBe(serverId);
-        expect(server.memberServerIds).toEqual([]);
-        // -- persistent state
-        expect(server.term).toBe(1);
-        expect(server.serverVotedFor).toBe(serverId);
-        // -- volatile state
-        expect(server.lastIndexCommitted).toBe(0);
-        expect(server.lastIndexProjected).toBe(0);
-        expect(server.logToReplicate).toBe(undefined);
-        expect(server.logReplicated).toBe(undefined);
+        expect(server).toBeARaftServerOfKind(ServerKind.FOLLOWER);
+        expect(server).toHaveVotedRaftServer(constants.NO_SERVER);
+        expect(server).toHaveRaftPeeringConfig(fixtures.SERVER_A, [fixtures.SERVER_B, fixtures.SERVER_C]);
+        expect(server).toBeAtRaftTerm(constants.TERM_1);
+        expect(server).toHaveHandledRaftLogsUntil({ committed: constants.LOG_0, projected: constants.LOG_0 });
       });
     });
   });
@@ -263,13 +184,10 @@ describe("ServerAggregate prevents erroneous transitions", () => {
     describe("from CANDIDATE kind", () => {
       it("with winElection() expecting original CANDIDATE kind", () => {
         // Given
-        const serverId = serverIdV.check("1af0d407-d520-4fff-9312-cf6ac72521a8");
-        const memberServerIds: ServerId[] = [];
-        const server = ServerAggregate.fromScratch(serverId, memberServerIds);
+        const server = generateFollowerServer();
         // When
         const action = () => server.winElection();
         // Then
-        // -- kind
         expect(action).toThrow();
       });
     });
@@ -549,7 +467,7 @@ describe("ServerAggregate can respond to RequestVote RPC", () => {
 
     // -- response
     expect(response.term).toBe(1);
-    expect(response.voteGranted).toBe(false);
+    expect(response.voteGranted).toBe(true);
   });
   it("as candidate - when candidateTerm > currentTerm - when candidateLastLogTerm > lastIndexCommitted", () => {
     // Given
