@@ -10,6 +10,25 @@ const fixtures = {
   SERVER_A: serverIdV.check("1af0d407-d520-4fff-9312-cf6ac72521a8"),
   SERVER_B: serverIdV.check("284fea2d-e7ad-4f7e-8a4e-c111f51420b7"),
   SERVER_C: serverIdV.check("3051168d-646e-45e1-ba71-d8b8f00f01b1"),
+
+  generateFollowerA: () => {
+    const server = ServerAggregate.fromScratch(fixtures.SERVER_A, [fixtures.SERVER_B, fixtures.SERVER_C]);
+    return server;
+  },
+  generateCandidateA: () => {
+    const server = fixtures.generateFollowerA();
+    server.startElection();
+    return server;
+  },
+  generateFollowerB: () => {
+    const server = ServerAggregate.fromScratch(fixtures.SERVER_B, [fixtures.SERVER_A, fixtures.SERVER_C]);
+    return server;
+  },
+  generateCandidateB: () => {
+    const server = fixtures.generateFollowerB();
+    server.startElection();
+    return server;
+  },
 };
 
 const constants = {
@@ -22,11 +41,6 @@ const constants = {
   LOG_0: logIndexV.check(0),
   LOG_1: logIndexV.check(1),
   LOG_2: logIndexV.check(2),
-};
-
-const generateFollowerServer = () => {
-  const server = ServerAggregate.fromScratch(fixtures.SERVER_A, [fixtures.SERVER_B, fixtures.SERVER_C]);
-  return server;
 };
 
 describe("ServerAggregate can be created", () => {
@@ -62,7 +76,7 @@ describe("ServerAggregate transition with success", () => {
     describe("to CANDIDATE kind", () => {
       it("startElection() ", () => {
         // Given
-        const server = generateFollowerServer();
+        const server = fixtures.generateFollowerA();
         // When
         server.startElection();
         // Then
@@ -74,7 +88,7 @@ describe("ServerAggregate transition with success", () => {
       });
       it("becomeFollower() ", () => {
         // Given
-        const server = generateFollowerServer();
+        const server = fixtures.generateFollowerA();
         // When
         server.becomeFollower();
         // Then
@@ -90,8 +104,7 @@ describe("ServerAggregate transition with success", () => {
     describe("to CANDIDATE kind", () => {
       it("restartElection() ", () => {
         // Given
-        const server = generateFollowerServer();
-        server.startElection();
+        const server = fixtures.generateCandidateA();
         // When
         server.restartElection();
         // Then
@@ -105,8 +118,7 @@ describe("ServerAggregate transition with success", () => {
     describe("to FOLLOWER kind", () => {
       it("cancelElection() ", () => {
         // Given
-        const server = generateFollowerServer();
-        server.startElection();
+        const server = fixtures.generateCandidateA();
         // When
         server.cancelElection();
         // Then
@@ -118,8 +130,7 @@ describe("ServerAggregate transition with success", () => {
       });
       it("becomeFollower() ", () => {
         // Given
-        const server = generateFollowerServer();
-        server.startElection();
+        const server = fixtures.generateCandidateA();
         // When
         server.becomeFollower();
         // Then
@@ -133,8 +144,7 @@ describe("ServerAggregate transition with success", () => {
     describe("to LEADER kind", () => {
       it("winElection() ", () => {
         // Given
-        const server = generateFollowerServer();
-        server.startElection();
+        const server = fixtures.generateCandidateA();
         // When
         server.winElection();
         // Then
@@ -150,8 +160,7 @@ describe("ServerAggregate transition with success", () => {
     describe("to FOLLOWER kind", () => {
       it("looseLeadership() ", () => {
         // Given
-        const server = generateFollowerServer();
-        server.startElection();
+        const server = fixtures.generateCandidateA();
         server.winElection();
         // When
         server.looseLeadership();
@@ -164,8 +173,7 @@ describe("ServerAggregate transition with success", () => {
       });
       it("becomeFollower() ", () => {
         // Given
-        const server = generateFollowerServer();
-        server.startElection();
+        const server = fixtures.generateCandidateA();
         server.winElection();
         // When
         server.becomeFollower();
@@ -184,7 +192,7 @@ describe("ServerAggregate prevents erroneous transitions", () => {
     describe("from CANDIDATE kind", () => {
       it("with winElection() expecting original CANDIDATE kind", () => {
         // Given
-        const server = generateFollowerServer();
+        const server = fixtures.generateFollowerA();
         // When
         const action = () => server.winElection();
         // Then
