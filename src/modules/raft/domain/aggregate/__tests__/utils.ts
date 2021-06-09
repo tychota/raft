@@ -2,7 +2,7 @@ import { ServerId } from "../../valueObject/serverId";
 import { TermIndex } from "../../valueObject/termIndex";
 import { ServerAggregate, ServerKind } from "../server.aggregate";
 
-const { diff } = require("jest-diff");
+import { diff } from "jest-diff";
 
 declare global {
   namespace jest {
@@ -13,11 +13,19 @@ declare global {
   }
 }
 
+export interface TypeWithArgs<T, A extends any[]> extends Function {
+  new (...args: A): T;
+}
+const assertInstanceOfServerAggregate = (instance: ServerAggregate) => {
+  if (!(instance instanceof ServerAggregate)) {
+    throw new Error("expected value to be a ServerAggregate");
+  }
+};
+
 expect.extend({
   toHaveKind(received: ServerAggregate, kind: ServerKind) {
-    if (!(received instanceof ServerAggregate)) {
-      throw new Error("expected value to be a ServerAggregate");
-    }
+    assertInstanceOfServerAggregate(received)
+    this
     if (received.kind !== kind) {
       return { pass: false, message: () => `Expected a raft server of kind "${kind}", got kind "${received.kind}".` };
     }

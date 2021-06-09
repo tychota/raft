@@ -2,7 +2,8 @@ import "./utils";
 
 import { logIndexV } from "../../valueObject/logIndex";
 import { ServerId, serverIdV } from "../../valueObject/serverId";
-import { TermIndex, termIndexV } from "../../valueObject/termIndex";
+import { termIndexV } from "../../valueObject/termIndex";
+
 import { increase, ServerAggregate, ServerKind } from "../server.aggregate";
 
 describe("ServerAggregate can be created", () => {
@@ -15,7 +16,7 @@ describe("ServerAggregate can be created", () => {
     // Then
     // -- kind
     expect(server).toHaveKind(ServerKind.FOLLOWER);
-    expect(server).toHaveConfig(serverId, ["a"]);
+    expect(server).toHaveConfig(serverId, []);
 
     // -- persistent state
     expect(server.term).toEqual(0);
