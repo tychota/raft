@@ -5,7 +5,8 @@
   "author": "TychoTa",
   "license": "MIT",
   "dependencies": {
-    "runtypes": "^6.3.0"
+    "runtypes": "^6.3.0",
+    "tsyringe": "^4.5.0"
   },
   "devDependencies": {
     "@babel/core": "^7.14.3",

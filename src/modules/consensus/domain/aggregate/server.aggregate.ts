@@ -52,7 +52,8 @@ export enum ServerKind {
   "FOLLOWER" = "FOLLOWER",
 }
 
-type LogIndexByServerId = Record<string, LogIndex>;
+type Dictionary<K extends string, V> = { [P in K as string]: V };
+type PeersLogIndex = Dictionary<ServerId, LogIndex>;
 
 export class ServerAggregate {
   // -----------------------
@@ -71,14 +72,14 @@ export class ServerAggregate {
    * @type {ServerId}
    * @memberof ServerAggregate
    */
-  serverId: ServerId;
+  id: ServerId;
   /**
    * The other ServerIds (unique id) identifying the other servers running in the cluster
    *
    * @type {ServerId[]}
    * @memberof ServerAggregate
    */
-  memberServerIds: ServerId[];
+  peers: ServerId[];
 
   // ------------------------
   // --- persistent state ---
@@ -139,20 +140,20 @@ export class ServerAggregate {
    *
    * NOTE: in Raft paper, this is named "nextIndex"
    *
-   * @type {(LogIndexByServerId | undefined)}
+   * @type {(PeersLogIndex | undefined)}
    * @memberof ServerAggregate
    */
-  logToReplicate: LogIndexByServerId | undefined;
+  logToReplicate: PeersLogIndex | undefined;
   /**
    * For each (other) servers, index of highest log entry known to be replicated
    * - initialized to 0
    *
    * NOTE: in Raft paper, this is named "matchIndex"
    *
-   * @type {(LogIndexByServerId | undefined)}
+   * @type {(PeersLogIndex | undefined)}
    * @memberof ServerAggregate
    */
-  logReplicated: LogIndexByServerId | undefined;
+  logReplicated: PeersLogIndex | undefined;
 
   // -------------------------------------
   // --- constructors and initializers ---
@@ -166,11 +167,11 @@ export class ServerAggregate {
     logs: LogEntry[],
     lastIndexCommitted: LogIndex,
     lastIndexProjected: LogIndex,
-    logToReplicate: LogIndexByServerId | undefined = undefined,
-    logReplicated: LogIndexByServerId | undefined = undefined
+    logToReplicate: PeersLogIndex | undefined = undefined,
+    logReplicated: PeersLogIndex | undefined = undefined
   ) {
-    this.serverId = serverId;
-    this.memberServerIds = memberServerIds;
+    this.id = serverId;
+    this.peers = memberServerIds;
     this.kind = ServerKind.FOLLOWER;
     this.term = term;
     this.serverVotedFor = serverVotedFor;
@@ -225,8 +226,8 @@ export class ServerAggregate {
     this.transition(ServerKind.CANDIDATE, ServerKind.LEADER);
     const nextIndex = increase(this.lastIndexCommitted);
     this.removeVote();
-    this.logToReplicate = this.buildMembersMap(nextIndex);
-    this.logReplicated = this.buildMembersMap(logIndexV.check(0));
+    this.logToReplicate = this.buildPeersMap(nextIndex);
+    this.logReplicated = this.buildPeersMap(logIndexV.check(0));
   }
 
   public cancelElection() {
@@ -295,14 +296,14 @@ export class ServerAggregate {
   // --- utils
 
   private voteForMe() {
-    this.serverVotedFor = this.serverId;
+    this.serverVotedFor = this.id;
   }
   private removeVote() {
     this.serverVotedFor = null;
   }
 
-  private buildMembersMap<V>(initialValue: V): { [serverId: string]: V } {
-    return this.memberServerIds.reduce((acc, id) => ({ ...acc, [id]: initialValue }), {});
+  private buildPeersMap<V>(initialValue: V): { [serverId: string]: V } {
+    return this.peers.reduce((acc, id) => ({ ...acc, [id]: initialValue }), {});
   }
 
   private canVoteFor(candidateId: ServerId) {

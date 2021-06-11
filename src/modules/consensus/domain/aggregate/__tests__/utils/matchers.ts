@@ -1,18 +1,18 @@
+import "jest";
+import { diff } from "jest-diff";
+
 import { ServerId } from "../../../valueObject/serverId";
 import { TermIndex } from "../../../valueObject/termIndex";
 import { LogIndex } from "../../../valueObject/logIndex";
 
 import { ServerAggregate, ServerKind } from "../../server.aggregate";
 
-import "jest";
-import { diff } from "jest-diff";
-
 declare global {
   namespace jest {
     interface Matchers<R> {
       toBeARaftServerOfKind(kind: ServerKind): R;
-      toHaveRaftPeeringConfig(serverId: ServerId, peers: ServerId[]): R;
-      toHaveVotedRaftServer(serverId: ServerId | null): R;
+      toHaveRaftPeeringConfig(id: ServerId, peers: ServerId[]): R;
+      toHaveVotedRaftServer(id: ServerId | null): R;
       toBeAtRaftTerm(term: TermIndex): R;
       toHaveHandledRaftLogsUntil(logIndexes: { committed: LogIndex; projected: LogIndex }): R;
     }
@@ -71,7 +71,7 @@ expect.extend({
     return passOK;
   },
 
-  toHaveRaftPeeringConfig(received: ServerAggregate, serverId: ServerId, peers: ServerId[]) {
+  toHaveRaftPeeringConfig(received: ServerAggregate, id: ServerId, peers: ServerId[]) {
     ensureServerAggregate(received);
 
     const metadata1 = {
@@ -79,7 +79,7 @@ expect.extend({
       expected: "serverId",
       matcher: "toHaveVotedRaftServer",
     };
-    const { ok: ok1, message: message1 } = checker.call(this, received.serverId, serverId, metadata1);
+    const { ok: ok1, message: message1 } = checker.call(this, received.id, id, metadata1);
     if (!ok1) return passKO(message1);
 
     const metadata2 = {
@@ -87,11 +87,11 @@ expect.extend({
       expected: "serverIds",
       matcher: "toHaveVotedRaftServer",
     };
-    const { ok: ok2, message: message2 } = checker.call(this, received.memberServerIds, peers, metadata2);
+    const { ok: ok2, message: message2 } = checker.call(this, received.peers, peers, metadata2);
     if (!ok2) return passKO(message2);
     return passOK;
   },
-  toHaveVotedRaftServer(received: ServerAggregate, serverId: ServerId | null) {
+  toHaveVotedRaftServer(received: ServerAggregate, id: ServerId | null) {
     ensureServerAggregate(received);
 
     const metadata = {
@@ -99,7 +99,7 @@ expect.extend({
       expected: "serverId",
       matcher: "toHaveVotedRaftServer",
     };
-    const { ok, message } = checker.call(this, received.serverVotedFor, serverId, metadata);
+    const { ok, message } = checker.call(this, received.serverVotedFor, id, metadata);
     if (!ok) return passKO(message);
     return passOK;
   },
@@ -123,12 +123,7 @@ expect.extend({
       expected: "{committed: logIndex, projected: _}",
       matcher: "toHaveHandledRaftLogsUntil",
     };
-    const { ok: ok1, message: message1 } = checker.call(
-      this,
-      received.lastIndexCommitted,
-      logIndexes.committed,
-      metadata1
-    );
+    const { ok: ok1, message: message1 } = checker.call(this, received.lastIndexCommitted, logIndexes.committed, metadata1);
     if (!ok1) return passKO(message1);
 
     const metadata2 = {
@@ -136,12 +131,7 @@ expect.extend({
       expected: "{committed: _, projected: logIndex}",
       matcher: "toHaveHandledRaftLogsUntil",
     };
-    const { ok: ok2, message: message2 } = checker.call(
-      this,
-      received.lastIndexCommitted,
-      logIndexes.committed,
-      metadata2
-    );
+    const { ok: ok2, message: message2 } = checker.call(this, received.lastIndexCommitted, logIndexes.committed, metadata2);
     if (!ok2) return passKO(message2);
     return passOK;
   },

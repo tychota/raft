@@ -4,8 +4,7 @@ import { logIndexV } from "../../valueObject/logIndex";
 import { ServerId, serverIdV } from "../../valueObject/serverId";
 import { termIndexV } from "../../valueObject/termIndex";
 
-import { increase, ServerAggregate, ServerKind } from "../server.aggregate";
-import { LogEntry, logEntryV } from "../../valueObject/logEntry";
+import { ServerAggregate, ServerKind } from "../server.aggregate";
 
 type ServerAction = "INIT_AS_FOLLOWER" | "START_ELECTION" | "WIN_ELECTION" | "CANCEL_ELECTION" | "RESTART_ELECTION" | "LOOSE_LEADERSHIP" | "ADD_LOG";
 
@@ -27,13 +26,6 @@ const applyAction = (server: ServerAggregate, action: ServerAction, actionIndex:
       break;
     case "LOOSE_LEADERSHIP":
       server.looseLeadership();
-      break;
-    case "ADD_LOG":
-      const term = server.term;
-      // TODO: fix logic
-      const log: LogEntry = logEntryV.check({ term, command: `TODO_${actionIndex}` });
-      server.logs.push(log);
-      server.lastIndexCommitted = increase(server.lastIndexCommitted);
       break;
   }
 };
@@ -239,7 +231,7 @@ describe("ServerAggregate can respond to RequestVote RPC", () => {
       const otherServer = fixtures.generateServerB("INIT_AS_FOLLOWER", "START_ELECTION");
 
       // When
-      const response = server.requestVote(otherServer.term, otherServer.serverId, constants.LOG_1, constants.TERM_1);
+      const response = server.requestVote(otherServer.term, otherServer.id, constants.LOG_1, constants.TERM_1);
 
       // Then
       // --- server
@@ -257,7 +249,7 @@ describe("ServerAggregate can respond to RequestVote RPC", () => {
       const otherServer = fixtures.generateServerB("INIT_AS_FOLLOWER", "START_ELECTION");
 
       // When
-      const response = server.requestVote(otherServer.term, otherServer.serverId, constants.LOG_1, constants.TERM_1);
+      const response = server.requestVote(otherServer.term, otherServer.id, constants.LOG_1, constants.TERM_1);
 
       // Then
       // --- server
@@ -275,7 +267,7 @@ describe("ServerAggregate can respond to RequestVote RPC", () => {
       const otherServer = fixtures.generateServerB("INIT_AS_FOLLOWER", "START_ELECTION");
 
       // When
-      const response = server.requestVote(otherServer.term, otherServer.serverId, constants.LOG_1, constants.TERM_1);
+      const response = server.requestVote(otherServer.term, otherServer.id, constants.LOG_1, constants.TERM_1);
 
       // Then
       // --- server
@@ -295,7 +287,7 @@ describe("ServerAggregate can respond to RequestVote RPC", () => {
       const otherServer = fixtures.generateServerB("INIT_AS_FOLLOWER", "START_ELECTION", "RESTART_ELECTION");
 
       // When
-      const response = server.requestVote(otherServer.term, otherServer.serverId, constants.LOG_1, constants.TERM_1);
+      const response = server.requestVote(otherServer.term, otherServer.id, constants.LOG_1, constants.TERM_1);
 
       // Then
       // --- server
@@ -313,7 +305,7 @@ describe("ServerAggregate can respond to RequestVote RPC", () => {
       const otherServer = fixtures.generateServerB("INIT_AS_FOLLOWER", "START_ELECTION");
 
       // When
-      const response = server.requestVote(otherServer.term, otherServer.serverId, constants.LOG_1, constants.TERM_1);
+      const response = server.requestVote(otherServer.term, otherServer.id, constants.LOG_1, constants.TERM_1);
 
       // Then
       // --- server
@@ -331,7 +323,7 @@ describe("ServerAggregate can respond to RequestVote RPC", () => {
       const otherServer = fixtures.generateServerB("INIT_AS_FOLLOWER", "START_ELECTION");
 
       // When
-      const response = server.requestVote(otherServer.term, otherServer.serverId, constants.LOG_1, constants.TERM_1);
+      const response = server.requestVote(otherServer.term, otherServer.id, constants.LOG_1, constants.TERM_1);
 
       // Then
       // --- server
@@ -349,7 +341,7 @@ describe("ServerAggregate can respond to RequestVote RPC", () => {
       const otherServer = fixtures.generateServerA("INIT_AS_FOLLOWER", "START_ELECTION");
 
       // When
-      const response = server.requestVote(otherServer.term, otherServer.serverId, constants.LOG_1, constants.TERM_1);
+      const response = server.requestVote(otherServer.term, otherServer.id, constants.LOG_1, constants.TERM_1);
 
       // Then
       // --- server
