@@ -1,11 +1,11 @@
 import "reflect-metadata";
-import "@di";
+import "@consensus/cqrs";
 
 import { container } from "tsyringe";
 
 import { ConsensusController } from "@consensus/infrastructure/consensus.controller";
 const controller = container.resolve(ConsensusController);
 
-import { createServer } from "net";
-const server = createServer();
+import { Server } from "modules/api/infrastructure/server";
+const server = new Server();
 server.listen();

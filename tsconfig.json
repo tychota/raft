@@ -47,6 +47,7 @@
     "baseUrl": "src" /* Base directory to resolve non-absolute module names. */,
     "paths": {
       "@framework/cqrs": ["framework/cqrs"],
+      "@consensus/*": ["modules/consensus/*"],
       "@consensus/business/*": [
         "modules/consensus/business/command/*",
         "modules/consensus/business/command/handler/*",
