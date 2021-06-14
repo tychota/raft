@@ -6,7 +6,7 @@ import { StartElection } from "./startElection";
 export class StartElectionHandler {
   constructor() {}
 
-  execute(command: StartElection) {
+  async execute(command: StartElection) {
     console.log("TADA");
   }
 }

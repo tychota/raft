@@ -6,7 +6,7 @@ import { HandleRequestVoteRPC } from "./handleRequestVoteRPC";
 export class HandleRequestVoteRPCHandler {
   constructor() {}
 
-  execute(command: HandleRequestVoteRPC) {
+  async execute(command: HandleRequestVoteRPC) {
     console.log("TADA");
   }
 }

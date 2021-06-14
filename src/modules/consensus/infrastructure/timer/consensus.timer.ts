@@ -1,17 +1,11 @@
-import { inject } from "tsyringe";
-import { DI } from "injection";
-import { IConsensusEventEmitter } from "../eventEmitter/consensus.emitter";
+import { singleton } from "tsyringe";
+import { ConsensusEventEmitter } from "../eventEmitter/consensus.emitter";
 
-export interface IConsensusTimer {
-  startFollowerTimeout(timeoutTime: number): void;
-  restartFollowerTimeout(timeoutTime: number): void;
-  clearFollowerTimeout(): void;
-}
-
+@singleton()
 export class ConsensusTimer {
   private followerTimeout?: NodeJS.Timeout;
 
-  constructor(@inject(DI.ConsensusEventEmitter) private readonly emitter: IConsensusEventEmitter) {}
+  constructor(private readonly emitter: ConsensusEventEmitter) {}
 
   startFollowerTimeout = (timeoutTime: number) => {
     this.followerTimeout = setTimeout(() => this.emitter.emit("followerHeartbeatTimeout"), timeoutTime);
