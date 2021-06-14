@@ -5,6 +5,7 @@
   "author": "TychoTa",
   "license": "MIT",
   "dependencies": {
+    "reflect-metadata": "^0.1.13",
     "runtypes": "^6.3.0",
     "tsyringe": "^4.5.0"
   },
@@ -15,9 +16,11 @@
     "@types/jest": "^26.0.23",
     "@types/node": "^15.12.1",
     "babel-jest": "^27.0.2",
+    "babel-plugin-transform-typescript-metadata": "^0.3.2",
     "jest": "^27.0.4",
     "prettier": "^2.3.1",
     "ts-node": "^10.0.0",
+    "tsconfig-paths": "^3.9.0",
     "typescript": "^4.3.2"
   },
   "scripts": {
