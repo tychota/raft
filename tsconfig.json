@@ -46,8 +46,8 @@
     "moduleResolution": "node" /* Specify module resolution strategy: 'node' (Node.js) or 'classic' (TypeScript pre-1.6). */,
     "baseUrl": "src" /* Base directory to resolve non-absolute module names. */,
     "paths": {
-      "@framework/cqrs": ["framework/cqrs"],
       "@api/infrastructure/*": ["modules/api/infrastructure/*"],
+
       "@consensus/*": ["modules/consensus/*"],
       "@consensus/business/*": [
         "modules/consensus/business/command/*",
@@ -60,7 +60,10 @@
         "modules/consensus/infrastructure/eventEmitter/*",
         "modules/consensus/infrastructure/timer/*"
       ],
-      "@di": ["injection"]
+      "@di": ["injection"],
+      "@framework/cqrs": ["framework/cqrs"],
+      "@log/infrastructure/*": ["modules/log/infrastructure/controller/*"],
+      "@log/domain/*": ["modules/log/domain/entity/*", "modules/log/domain/valueObject/*"]
     } /* A series of entries which re-map imports to lookup locations relative to the 'baseUrl'. */,
     // "rootDirs": [],                              /* List of root folders whose combined content represents the structure of the project at runtime. */
     // "typeRoots": [],                             /* List of folders to include type definitions from. */

@@ -5,6 +5,7 @@
   "author": "TychoTa",
   "license": "MIT",
   "dependencies": {
+    "deepmerge": "^4.2.2",
     "reflect-metadata": "^0.1.13",
     "runtypes": "^6.3.0",
     "tsyringe": "^4.5.0"
