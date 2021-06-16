@@ -8,7 +8,7 @@ import { HandleRequestVoteRPC } from "./handleRequestVoteRPC";
 
 class HandleRequestVoteRPCLog extends LogOrigin {
   constructor() {
-    super("API", ArchitectureLayer.BUSINESS, "handleRequestVoteRPC.handler.ts");
+    super("CONSENSUS", ArchitectureLayer.BUSINESS, "handleRequestVoteRPC.handler.ts");
   }
 }
 

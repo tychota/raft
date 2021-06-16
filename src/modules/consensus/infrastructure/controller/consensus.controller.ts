@@ -8,32 +8,39 @@ import { StartElection } from "@consensus/business/startElection";
 
 import { ConsensusEventEmitter } from "@consensus/infrastructure/consensus.emitter";
 import { PostCommandHook, PostQueryHook, PreCommandHook, PreQueryHook } from "framework/cqrs/hooks";
+import { LoggerController } from "@log/infrastructure/logger.controller";
+import { LogOrigin, ArchitectureLayer } from "@log/domain/logOrigin";
 
 export interface IConsensusController {
   handleRequestVoteRPC(): Promise<void>;
 }
-
+class ConsensusControllerLog extends LogOrigin {
+  constructor() {
+    super("CONSENSUS", ArchitectureLayer.INFRASTRUCTURE, "consensus.controller.ts");
+  }
+}
 @injectable()
 export class ConsensusController implements IConsensusController {
-  constructor(private readonly bus: UseCaseBus, private readonly emitter: ConsensusEventEmitter) {
+  constructor(private readonly bus: UseCaseBus, private readonly emitter: ConsensusEventEmitter, private readonly logger: LoggerController) {
+    this.logger.setOrigin(new ConsensusControllerLog());
     this.bus.registerLocalHook(
       new PreQueryHook((query, metadata) => {
-        console.log(metadata.processTime, query.constructor.name);
+        this.logger.verbose("START_QUERY", { query: query.constructor.name }, { time: metadata.processTime });
       })
     );
     this.bus.registerLocalHook(
       new PostQueryHook((query, metadata) => {
-        console.log(metadata.processTime, query.constructor.name, metadata.queryTime);
+        this.logger.verbose("FINNISH_QUERY", { query: query.constructor.name }, { time: metadata.processTime, spendTime: metadata.queryTime });
       })
     );
     this.bus.registerLocalHook(
       new PreCommandHook((command, metadata) => {
-        console.log(metadata.processTime, command.constructor.name);
+        this.logger.verbose("START_COMMAND", { command: command.constructor.name }, { time: metadata.processTime });
       })
     );
     this.bus.registerLocalHook(
       new PostCommandHook((command, metadata) => {
-        console.log(metadata.processTime, command.constructor.name, metadata.queryTime);
+        this.logger.verbose("FINNISH_COMMAND", { command: command.constructor.name }, { time: metadata.processTime, spendTime: metadata.queryTime });
       })
     );
 
