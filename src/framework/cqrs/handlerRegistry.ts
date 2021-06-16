@@ -1,4 +1,4 @@
-import { container, singleton } from "tsyringe";
+import { container, delay, singleton } from "tsyringe";
 import { Command, CommandHandler, Constructor, Query, QueryHandler } from "./interface";
 
 @singleton()
@@ -14,7 +14,7 @@ export class HandlerRegistry {
     const commandClass = command.constructor as Constructor<Command>;
     const commandHandlerClass = this.commands.get(commandClass);
     if (!commandHandlerClass) throw new Error(`No command handler registered for command ${command.constructor.name}`);
-    return container.resolve(commandHandlerClass);
+    return container.resolve(delay(() => commandHandlerClass));
   };
 
   registerQueryHandler = (queryClass: Constructor<Query>, handlerClass: Constructor<QueryHandler<Query>>) => {
@@ -25,6 +25,6 @@ export class HandlerRegistry {
     const queryClass = query.constructor as Constructor<Query>;
     const queryHandlerClass = this.queries.get(queryClass);
     if (!queryHandlerClass) throw new Error(`No query handler registered for query ${query.constructor.name}`);
-    return container.resolve(queryHandlerClass);
+    return container.resolve(delay(() => queryHandlerClass));
   };
 }
