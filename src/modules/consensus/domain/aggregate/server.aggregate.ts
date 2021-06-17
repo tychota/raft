@@ -225,7 +225,6 @@ export class ServerAggregate {
   public winElection() {
     this.transition(ServerKind.CANDIDATE, ServerKind.LEADER);
     const nextIndex = increase(this.lastIndexCommitted);
-    this.removeVote();
     this.logToReplicate = this.buildPeersMap(nextIndex);
     this.logReplicated = this.buildPeersMap(logIndexV.check(0));
   }
@@ -233,11 +232,11 @@ export class ServerAggregate {
   public cancelElection() {
     this.transition(ServerKind.CANDIDATE, ServerKind.FOLLOWER);
     this.removeVote();
-    this.serverVotedFor = null;
   }
 
   public looseLeadership() {
     this.transition(ServerKind.LEADER, ServerKind.FOLLOWER);
+    this.removeVote();
     this.logToReplicate = undefined;
     this.logReplicated = undefined;
   }
@@ -348,6 +347,7 @@ export class ServerAggregate {
 
   private increaseTerm() {
     this.term = increase(this.term);
+    this.removeVote();
   }
 
   private transition(currentKind: ServerKind, targetKind: ServerKind) {

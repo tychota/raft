@@ -170,7 +170,7 @@ describe("ServerAggregate transition with success", () => {
         server.winElection();
         // Then
         expect(server).toBeARaftServerOfKind(ServerKind.LEADER);
-        expect(server).toHaveVotedRaftServer(constants.NO_SERVER);
+        expect(server).toHaveVotedRaftServer(fixtures.SERVER_A);
         expect(server).toHaveRaftPeeringConfig(fixtures.SERVER_A, [fixtures.SERVER_B, fixtures.SERVER_C]);
         expect(server).toBeAtRaftTerm(constants.TERM_1);
         expect(server).toHaveHandledRaftLogsUntil({ committed: constants.LOG_0, projected: constants.LOG_0 });
