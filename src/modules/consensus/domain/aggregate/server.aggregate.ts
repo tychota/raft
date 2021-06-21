@@ -41,9 +41,14 @@
  *
  */
 
+import { PersistentDto } from "../dto/persistent.dto";
+import { VolatileDto } from "../dto/volatile.dto";
 import { LogEntry } from "../valueObject/logEntry";
 import { LogIndex, logIndexV } from "../valueObject/logIndex";
-import { ServerId } from "../valueObject/serverId";
+import { logsV } from "../valueObject/logs";
+import { Peers, peersV } from "../valueObject/peers";
+import { PeersLogIndexes, peersLogIndexes } from "../valueObject/peersLogIndex";
+import { ServerId, serverIdV } from "../valueObject/serverId";
 import { TermIndex, termIndexV } from "../valueObject/termIndex";
 
 export enum ServerKind {
@@ -51,9 +56,6 @@ export enum ServerKind {
   "CANDIDATE" = "CANDIDATE",
   "FOLLOWER" = "FOLLOWER",
 }
-
-type Dictionary<K extends string, V> = { [P in K as string]: V };
-type PeersLogIndex = Dictionary<ServerId, LogIndex>;
 
 export class ServerAggregate {
   // -----------------------
@@ -76,10 +78,10 @@ export class ServerAggregate {
   /**
    * The other ServerIds (unique id) identifying the other servers running in the cluster
    *
-   * @type {ServerId[]}
+   * @type {Peers}
    * @memberof ServerAggregate
    */
-  peers: ServerId[];
+  peers: Peers;
 
   // ------------------------
   // --- persistent state ---
@@ -103,6 +105,13 @@ export class ServerAggregate {
    * @memberof ServerAggregate
    */
   serverVotedFor: ServerId | null;
+
+  /**
+   * Logs are the append only entries received by the server
+   *
+   * @type {LogEntry[]}
+   * @memberof ServerAggregate
+   */
   logs: LogEntry[];
 
   // ----------------------
@@ -140,20 +149,20 @@ export class ServerAggregate {
    *
    * NOTE: in Raft paper, this is named "nextIndex"
    *
-   * @type {(PeersLogIndex | undefined)}
+   * @type {(PeersLogIndex | null)}
    * @memberof ServerAggregate
    */
-  logToReplicate: PeersLogIndex | undefined;
+  logsToReplicate: PeersLogIndexes | null;
   /**
    * For each (other) servers, index of highest log entry known to be replicated
    * - initialized to 0
    *
    * NOTE: in Raft paper, this is named "matchIndex"
    *
-   * @type {(PeersLogIndex | undefined)}
+   * @type {(PeersLogIndex | null)}
    * @memberof ServerAggregate
    */
-  logReplicated: PeersLogIndex | undefined;
+  logsReplicated: PeersLogIndexes | null;
 
   // -------------------------------------
   // --- constructors and initializers ---
@@ -161,34 +170,47 @@ export class ServerAggregate {
 
   private constructor(
     serverId: ServerId,
-    memberServerIds: ServerId[],
+    peers: Peers,
     term: TermIndex,
     serverVotedFor: ServerId | null,
     logs: LogEntry[],
     lastIndexCommitted: LogIndex,
     lastIndexProjected: LogIndex,
-    logToReplicate: PeersLogIndex | undefined = undefined,
-    logReplicated: PeersLogIndex | undefined = undefined
+    logToReplicate: PeersLogIndexes | null = null,
+    logReplicated: PeersLogIndexes | null = null
   ) {
     this.id = serverId;
-    this.peers = memberServerIds;
+    this.peers = peers;
     this.kind = ServerKind.FOLLOWER;
     this.term = term;
     this.serverVotedFor = serverVotedFor;
     this.logs = logs;
     this.lastIndexCommitted = lastIndexCommitted;
     this.lastIndexProjected = lastIndexProjected;
-    this.logToReplicate = logToReplicate;
-    this.logReplicated = logReplicated;
+    this.logsToReplicate = logToReplicate;
+    this.logsReplicated = logReplicated;
   }
 
-  public static fromScratch(id: ServerId, memberServerIds: ServerId[]) {
+  public static fromScratch(id: ServerId, peers: Peers) {
     const term = termIndexV.check(0);
     const serverVotedFor = null;
     const lastIndexCommitted = logIndexV.check(0);
     const lastIndexProjected = logIndexV.check(0);
     const logs: LogEntry[] = [];
-    return new ServerAggregate(id, memberServerIds, term, serverVotedFor, logs, lastIndexCommitted, lastIndexProjected);
+    return new ServerAggregate(id, peers, term, serverVotedFor, logs, lastIndexCommitted, lastIndexProjected);
+  }
+
+  public static fromStored(data: VolatileDto & PersistentDto) {
+    const id = serverIdV.check(data.id);
+    const peers = peersV.check(data.peers);
+    const term = termIndexV.check(data.term);
+    const serverVotedFor = data.serverVotedFor === null ? null : serverIdV.check(data.serverVotedFor);
+    const logs = logsV.check(data.logs);
+    const lastIndexCommitted = logIndexV.check(data.lastIndexCommitted);
+    const lastIndexProjected = logIndexV.check(data.lastIndexProjected);
+    const logsToReplicate = data.logsToReplicate && peersLogIndexes.check(data.logsToReplicate);
+    const logsReplicated = data.logsReplicated && peersLogIndexes.check(data.logsReplicated);
+    return new ServerAggregate(id, peers, term, serverVotedFor, logs, lastIndexCommitted, lastIndexProjected, logsToReplicate, logsReplicated);
   }
 
   // ----------------------------
@@ -225,8 +247,8 @@ export class ServerAggregate {
   public winElection() {
     this.transition(ServerKind.CANDIDATE, ServerKind.LEADER);
     const nextIndex = increase(this.lastIndexCommitted);
-    this.logToReplicate = this.buildPeersMap(nextIndex);
-    this.logReplicated = this.buildPeersMap(logIndexV.check(0));
+    this.logsToReplicate = this.buildPeersMap(nextIndex);
+    this.logsReplicated = this.buildPeersMap(logIndexV.check(0));
   }
 
   public cancelElection() {
@@ -237,8 +259,8 @@ export class ServerAggregate {
   public looseLeadership() {
     this.transition(ServerKind.LEADER, ServerKind.FOLLOWER);
     this.removeVote();
-    this.logToReplicate = undefined;
-    this.logReplicated = undefined;
+    this.logsToReplicate = null;
+    this.logsReplicated = null;
   }
 
   public becomeFollower() {

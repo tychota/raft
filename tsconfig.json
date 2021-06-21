@@ -49,6 +49,7 @@
       "@api/infrastructure/*": ["modules/api/infrastructure/*"],
 
       "@consensus/*": ["modules/consensus/*"],
+      "@consensus/domain/*": ["modules/consensus/domain/dto/*", "modules/consensus/domain/aggregate/*", "modules/consensus/domain/valueObject/*"],
       "@consensus/business/*": [
         "modules/consensus/business/command/*",
         "modules/consensus/business/command/handler/*",
@@ -58,6 +59,7 @@
       "@consensus/infrastructure/*": [
         "modules/consensus/infrastructure/controller/*",
         "modules/consensus/infrastructure/eventEmitter/*",
+        "modules/consensus/infrastructure/storage/*",
         "modules/consensus/infrastructure/timer/*"
       ],
       "@di": ["injection"],

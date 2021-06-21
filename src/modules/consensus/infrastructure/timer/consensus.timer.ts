@@ -3,20 +3,27 @@ import { ConsensusEventEmitter } from "../eventEmitter/consensus.emitter";
 
 @singleton()
 export class ConsensusTimer {
-  private followerTimeout?: NodeJS.Timeout;
+  private followerHeartbeatTimeout?: NodeJS.Timeout;
+  private candidateElectionTimeout?: NodeJS.Timeout;
 
   constructor(private readonly emitter: ConsensusEventEmitter) {}
 
   startFollowerTimeout = (timeoutTime: number) => {
-    this.followerTimeout = setTimeout(() => this.emitter.emit("followerHeartbeatTimeout"), timeoutTime);
+    this.followerHeartbeatTimeout = setTimeout(() => this.emitter.emit("followerHeartbeatTimeout"), timeoutTime);
   };
 
   restartFollowerTimeout = (timeoutTime: number) => {
-    this.followerTimeout && clearTimeout(this.followerTimeout);
-    this.followerTimeout = setTimeout(() => this.emitter.emit("followerHeartbeatTimeout"), timeoutTime);
+    this.followerHeartbeatTimeout && clearTimeout(this.followerHeartbeatTimeout);
+    this.followerHeartbeatTimeout = setTimeout(() => this.emitter.emit("followerHeartbeatTimeout"), timeoutTime);
   };
 
   clearFollowerTimeout = () => {
-    this.followerTimeout && clearTimeout(this.followerTimeout);
+    this.followerHeartbeatTimeout && clearTimeout(this.followerHeartbeatTimeout);
+  };
+
+  waitElectionTimeout = (timeoutTime: number) => {
+    return new Promise<void>((resolve, _) => {
+      setTimeout(() => resolve(), timeoutTime);
+    });
   };
 }
